@@ -1,0 +1,1309 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Binance Futures Monitor</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <style>
+        /* --- THEME VARIABLES --- */
+        :root {
+            --background-body: #0b0b0b;
+            --background-header: #161b22;
+            --background-input: #0d1117;
+            --border-color: #30363d;
+            --text-main: #8b949e;
+            --text-bright: #c9d1d9;
+            --text-dim: #484f58;
+            --accent-blue: #58a6ff;
+            --accent-green: #3fb950;
+            --accent-red: #f85149;
+            --hover-background: #21262d;
+            --overlay-background: #0b0b0b;
+            --scrollbar-thumb: #30363d;
+            --icon-color: #8b949e;
+            --error-background: #cf222e;
+            --history-bg: #11151c;
+            --badge-bg: #21262d;
+            --badge-text: #8b949e;
+            /* --- UTILITY VARIABLES --- */
+            --border-radius: 4px;
+            --transition-fast: 0.15s ease;
+            --transition-slow: 0.3s ease;
+            --transition-theme: 0.8s ease;
+        }
+
+        .light-theme {
+            --background-body: #ffffff;
+            --background-header: #f6f8fa;
+            --background-input: #ffffff;
+            --border-color: #d0d7de;
+            --text-main: #57606a;
+            --text-bright: #24292f;
+            --text-dim: #8c959f;
+            --accent-blue: #0969da;
+            --accent-green: #1a7f37;
+            --accent-red: #cf222e;
+            --hover-background: #eaeef2;
+            --overlay-background: #ffffff;
+            --scrollbar-thumb: #d0d7de;
+            --icon-color: #57606a;
+            --error-background: #cf222e;
+            --history-bg: #f3f4f6;
+            --badge-bg: #e1e4e8;
+            --badge-text: #57606a;
+            /* --- UTILITY VARIABLES --- */
+            --border-radius: 4px;
+            --transition-fast: 0.15s ease;
+            --transition-slow: 0.3s ease;
+            --transition-theme: 0.8s ease;
+        }
+
+        /* --- BASE STYLES --- */
+        body {
+            background-color: var(--background-body);
+            color: var(--text-main);
+            font-family: 'JetBrains Mono', 'Consolas', monospace;
+            margin: 0;
+            padding: 0;
+            font-size: 13px;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            transition: background-color var(--transition-theme), color var(--transition-theme);
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+
+        /* --- BASE COMPONENTS --- */
+        .base-input {
+            background: var(--background-input);
+            border: 1px solid var(--border-color);
+            border-radius: var(--border-radius);
+            font-family: inherit;
+            transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+        }
+
+        .base-input:focus {
+            border-color: var(--accent-blue);
+            outline: none;
+            box-shadow: 0 0 0 2px rgba(88, 166, 255, 0.2);
+        }
+
+        .base-button {
+            border: 1px solid var(--border-color);
+            border-radius: var(--border-radius);
+            font-family: inherit;
+            cursor: pointer;
+            transition: all var(--transition-fast);
+        }
+
+        .base-button:hover {
+            border-color: var(--text-main);
+            background: var(--border-color);
+        }
+
+        .interactive-element {
+            transition: color var(--transition-fast), transform var(--transition-fast);
+        }
+
+        .interactive-element:hover {
+            color: var(--text-bright);
+        }
+
+        /* --- HEADER --- */
+        .header-bar {
+            background-color: var(--background-header);
+            border-bottom: 1px solid var(--border-color);
+            padding: 10px 20px;
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            flex-shrink: 0;
+            z-index: 20;
+            position: relative;
+            transition: background-color var(--transition-theme), border-color var(--transition-slow);
+        }
+
+        .menu-toggle-button {
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            color: var(--icon-color);
+            background: none;
+            border: none;
+            padding: 0 5px 0 0;
+            transition: color var(--transition-fast), transform var(--transition-fast);
+        }
+
+        .menu-toggle-button:hover {
+            color: var(--accent-blue);
+            transform: scale(1.1);
+        }
+
+        input[type="number"]::-webkit-inner-spin-button,
+        input[type="number"]::-webkit-outer-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+
+        input[type="number"] {
+            -moz-appearance: textfield;
+            appearance: textfield;
+        }
+
+        .live-filter-wrapper {
+            display: flex;
+            align-items: center;
+            border-right: 1px solid var(--border-color);
+            padding-right: 20px;
+        }
+
+        .live-filter-input {
+            background: var(--background-input);
+            border: 1px solid var(--border-color);
+            border-radius: var(--border-radius);
+            font-family: inherit;
+            transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+            color: var(--accent-blue);
+            padding: 5px 10px;
+            font-size: 13px;
+            width: 140px;
+            text-transform: uppercase;
+        }
+
+        .live-filter-input:focus {
+            border-color: var(--accent-blue);
+            outline: none;
+            box-shadow: 0 0 0 2px rgba(88, 166, 255, 0.2);
+        }
+
+        .setting-group {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .setting-group label {
+            font-size: 10px;
+            color: var(--text-dim);
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+
+        .param-divider {
+            height: 34px;
+            border-left: 1px solid var(--border-color);
+            margin: 0 10px;
+        }
+
+        .setting-group input {
+            background: var(--background-input);
+            border: 1px solid var(--border-color);
+            border-radius: var(--border-radius);
+            font-family: inherit;
+            transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+            color: var(--text-bright);
+            padding: 4px 8px;
+            font-size: 12px;
+            width: 100px;
+        }
+
+        .setting-group input:focus {
+            border-color: var(--accent-blue);
+            outline: none;
+            box-shadow: 0 0 0 2px rgba(88, 166, 255, 0.2);
+        }
+
+        .header-bar.saved {
+            background-color: #06311d !important;
+            box-shadow: 0 0 15px rgba(22, 163, 74, 0.4);
+        }
+
+        .header-actions {
+            margin-left: auto;
+            display: flex;
+            gap: 10px;
+        }
+
+        .action-button {
+            background: var(--hover-background);
+            border: 1px solid var(--border-color);
+            border-radius: var(--border-radius);
+            color: var(--text-bright);
+            padding: 5px 12px;
+            cursor: pointer;
+            font-family: inherit;
+            font-size: 12px;
+            transition: all var(--transition-fast);
+        }
+
+        .action-button:hover {
+            border-color: var(--text-main);
+            background: var(--border-color);
+        }
+
+        .theme-toggle-button {
+            font-size: 14px;
+            padding: 4px 10px;
+        }
+
+        /* --- ТАБЛИЦА --- */
+        .table-container {
+            flex: 1;
+            overflow-y: auto;
+            overflow-x: hidden;
+            background: var(--background-input);
+            scrollbar-width: thin;
+            scrollbar-color: var(--scrollbar-thumb) var(--background-input);
+            will-change: scroll-position;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .table-container::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .table-container::-webkit-scrollbar-track {
+            background: var(--background-input);
+        }
+
+        .table-container::-webkit-scrollbar-thumb {
+            background: var(--scrollbar-thumb);
+            border-radius: var(--border-radius);
+        }
+
+        .table-container::-webkit-scrollbar-thumb:hover {
+            background: var(--text-dim);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            table-layout: fixed;
+            border-spacing: 0;
+        }
+
+        thead {
+            position: sticky;
+            top: 0;
+            background: var(--background-header);
+            z-index: 10;
+            box-shadow: 0 1px 0 var(--border-color);
+            will-change: transform;
+        }
+
+        th {
+            text-align: left;
+            padding: 10px 15px;
+            color: var(--text-bright);
+            font-size: 11px;
+            text-transform: uppercase;
+            font-weight: 600;
+        }
+
+        tbody {
+            contain: layout style;
+        }
+
+        tr {
+            contain: layout style paint;
+        }
+
+        td {
+            padding: 8px 15px;
+            border-bottom: 1px solid var(--border-color);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            vertical-align: middle;
+        }
+
+        /* COLUMNS */
+        .col-count {
+            width: 100px;
+            text-align: center;
+            color: var(--text-dim);
+            font-weight: bold;
+            cursor: pointer;
+            user-select: none;
+            transition: color var(--transition-fast);
+        }
+
+        .col-count:hover {
+            color: var(--text-bright);
+        }
+
+        .active-sort {
+            background-color: rgba(88, 166, 255, 0.1);
+            color: var(--accent-blue) !important;
+        }
+
+        .col-toggle {
+            width: 30px;
+            text-align: center;
+            cursor: pointer;
+            color: var(--accent-blue);
+            font-weight: bold;
+            user-select: none;
+            transition: transform var(--transition-fast);
+        }
+
+        .col-toggle:hover {
+            transform: scale(1.1);
+        }
+
+        .col-time {
+            width: 90px;
+            color: var(--text-bright);
+        }
+
+        .col-symbol {
+            width: 140px;
+            font-weight: bold;
+        }
+
+        .col-type {
+            width: 110px;
+        }
+
+        .col-price {
+            width: 110px;
+            text-align: right;
+            padding-right: 15px;
+        }
+
+        .col-chg {
+            width: 60px;
+            text-align: right;
+            font-weight: bold;
+            cursor: pointer;
+            user-select: none;
+            transition: color var(--transition-fast);
+        }
+
+        .col-chg:hover {
+            color: var(--text-bright);
+        }
+
+        .pos-chg {
+            color: var(--accent-green);
+        }
+
+        .neg-chg {
+            color: var(--accent-red);
+        }
+
+        .col-vol24 {
+            width: 80px;
+            text-align: right;
+            color: var(--text-bright);
+        }
+
+        .col-trades {
+            width: 80px;
+            text-align: right;
+            color: var(--text-bright);
+        }
+
+        .count-badge {
+            background-color: var(--badge-bg);
+            color: var(--text-bright);
+            padding: 2px 6px;
+            border-radius: 10px;
+            display: inline-flex;
+            gap: 2px;
+            align-items: center;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .pump-count {
+            color: var(--accent-green);
+            font-weight: bold;
+        }
+
+        .trades-count {
+            color: #d29922;
+            font-weight: bold;
+        }
+
+        .vol-count {
+            color: var(--accent-blue);
+            opacity: 0.8;
+        }
+
+        .col-details {
+            width: auto;
+            color: var(--text-bright);
+        }
+
+        a.symbol-link {
+            color: var(--text-bright);
+            text-decoration: none;
+            transition: color var(--transition-fast);
+        }
+
+        a.symbol-link:hover {
+            color: var(--accent-blue);
+            text-decoration: underline;
+        }
+
+        .type-vol {
+            color: var(--accent-blue);
+        }
+
+        .type-price {
+            color: var(--accent-green);
+        }
+
+        .val-vol {
+            color: var(--accent-blue);
+            opacity: 0.8;
+        }
+
+        .val-price-up {
+            color: var(--accent-green);
+        }
+
+        .type-trades {
+            color: #d29922;
+        }
+
+        .val-trades {
+            color: #d29922;
+        }
+
+        .dim {
+            color: var(--text-dim);
+        }
+
+        /* ANIMATIONS */
+        .row-new {
+            animation: flashRow 0s ease-out;
+            will-change: background-color;
+        }
+
+        @keyframes flashRow {
+            0% {
+                background-color: rgba(88, 166, 255, 0.2);
+            }
+            100% {
+                background-color: transparent;
+            }
+        }
+
+        .row-pump {
+            animation: flashPump 0s ease-out forwards;
+            will-change: background-color;
+        }
+
+        @keyframes flashPump {
+            0% {
+                background-color: rgba(63, 185, 80, 0.25);
+            }
+            80% {
+                background-color: rgba(63, 185, 80, 0.1);
+            }
+            100% {
+                background-color: transparent;
+            }
+        }
+
+        .hidden-row {
+            display: none;
+        }
+
+        .history-row {
+            opacity: 0.85;
+        }
+
+        .history-row td {
+            background-color: var(--history-bg);
+            color: var(--text-dim);
+            padding-top: 4px;
+            padding-bottom: 4px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .history-row .col-symbol {
+            padding-left: 30px;
+        }
+
+        /* --- BANNERS --- */
+        .banner {
+            position: fixed;
+            left: 50%;
+            transform: translateX(-50%);
+            bottom: 20px;
+            background-color: var(--error-background);
+            color: white;
+            padding: 12px 20px;
+            border-radius: 6px;
+            font-weight: bold;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            display: none;
+            align-items: flex-start;
+            gap: 15px;
+            animation: slideUp var(--transition-slow)-out;
+            min-width: 400px;
+            max-width: 600px;
+            justify-content: space-between;
+            will-change: transform, opacity;
+            backface-visibility: hidden;
+        }
+        
+        .banner > span {
+            flex: 1;
+            line-height: 1.4;
+        }
+
+        .banner-info {
+            bottom: 80px;
+            background-color: #d29922;
+            z-index: 1001;
+        }
+
+        .banner-success {
+            bottom: 140px;
+            background-color: var(--accent-green);
+            z-index: 1002;
+        }
+
+        @keyframes slideUp {
+            from {
+                transform: translate(-50%, 100%);
+                opacity: 0;
+            }
+            to {
+                transform: translate(-50%, 0);
+                opacity: 1;
+            }
+        }
+
+        .banner-close {
+            background: transparent;
+            border: none;
+            color: rgba(255, 255, 255, 0.7);
+            cursor: pointer;
+            font-size: 18px;
+            padding: 0 5px;
+            transition: color var(--transition-fast);
+        }
+
+        .banner-close:hover {
+            color: white;
+        }
+
+        /* OVERLAY */
+        .overlay-management {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: var(--overlay-background);
+            z-index: 50;
+            display: none;
+            flex-direction: column;
+            backdrop-filter: blur(5px);
+            -webkit-backdrop-filter: blur(5px);
+            will-change: opacity;
+        }
+
+        .overlay-header {
+            padding: 20px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+        }
+
+        .overlay-close-button {
+            font-size: 24px;
+            font-weight: bold;
+            cursor: pointer;
+            color: var(--icon-color);
+            background: none;
+            border: none;
+            padding: 0 20px;
+            transition: color var(--transition-fast), transform var(--transition-fast);
+        }
+
+        .overlay-close-button:hover {
+            color: var(--accent-blue);
+            transform: scale(1.1);
+        }
+
+        .lists-container {
+            display: flex;
+            flex: 1;
+            padding: 40px;
+            gap: 60px;
+            max-width: 1400px;
+            margin: 0 auto;
+            width: 100%;
+        }
+
+        .list-column {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .list-header {
+            font-size: 20px;
+            color: var(--text-bright);
+            border-bottom: 2px solid var(--border-color);
+            padding-bottom: 15px;
+            margin-bottom: 10px;
+        }
+
+        .add-form {
+            display: flex;
+            gap: 10px;
+        }
+
+        .add-form input {
+            flex: 1;
+            padding: 10px;
+            background: var(--background-header);
+            border: 1px solid var(--border-color);
+            color: var(--text-bright);
+            border-radius: var(--border-radius);
+        }
+
+        .add-form button {
+            padding: 0 20px;
+            background: #238636;
+            border: 1px solid #2ea043;
+            color: white;
+            border-radius: var(--border-radius);
+            cursor: pointer;
+            transition: background-color var(--transition-theme), border-color var(--transition-slow);
+        }
+
+        .add-form button:hover {
+            background: #2ea043;
+            transform: translateY(-1px);
+        }
+
+        .add-form button:active {
+            transform: translateY(0);
+        }
+
+        .items-list {
+            overflow-y: auto;
+            flex: 1;
+        }
+
+        .list-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px solid var(--border-color);
+            color: var(--text-main);
+        }
+
+        .list-item button {
+            background: none;
+            border: none;
+            color: var(--text-dim);
+            cursor: pointer;
+            transition: color var(--transition-fast), transform 0.1s ease;
+            font-size: 16px;
+        }
+
+        .list-item button:hover {
+            color: var(--accent-red);
+            transform: scale(1.2);
+        }
+    </style>
+</head>
+
+<body x-data="monitorApp()">
+
+    <!-- BANNERS -->
+    <div id="error-banner" class="banner"><span id="error-msg">⚠ Connection Lost!</span><button class="banner-close"
+            onclick="document.getElementById('error-banner').style.display='none'">✕</button></div>
+    <div id="info-banner" class="banner banner-info"><span id="info-msg">ℹ Connection Restored</span><button
+            class="banner-close" onclick="document.getElementById('info-banner').style.display='none'">✕</button></div>
+    <div id="success-banner" class="banner banner-success"><span id="success-msg">✔ Connected to Server</span><button
+            class="banner-close" onclick="document.getElementById('success-banner').style.display='none'">✕</button>
+    </div>
+
+    <!-- MENU -->
+    <div id="management-overlay" class="overlay-management">
+        <div class="overlay-header"><button class="overlay-close-button" onclick="toggleMenu()">&lt;</button></div>
+        <div class="lists-container">
+            <div class="list-column">
+                <div class="list-header">Ignore</div>
+                <form action="/manage_list" method="POST" class="add-form"><input type="text" name="symbol"><button
+                        type="submit" name="action" value="add_ign">+</button></form>
+                <div class="items-list">
+                    {% for c in ignores %}
+                    <div class="list-item">
+                        <span>{{c}}</span>
+                        <form action="/manage_list" method="POST"><input type="hidden" name="symbol"
+                                value="{{c}}"><button type="submit" name="action" value="rem_ign">✕</button></form>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            <div class="list-column">
+                <div class="list-header">Monitor</div>
+                <form action="/manage_list" method="POST" class="add-form"><input type="text" name="symbol"><button
+                        type="submit" name="action" value="add_mon">+</button></form>
+                <div class="items-list">
+                    {% for c in monitors %}
+                    <div class="list-item">
+                        <span>{{c}}</span>
+                        <form action="/manage_list" method="POST"><input type="hidden" name="symbol"
+                                value="{{c}}"><button type="submit" name="action" value="rem_mon">✕</button></form>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- PANEL -->
+    <div class="header-bar">
+        <button class="menu-toggle-button" onclick="toggleMenu()">&gt;</button>
+        <div class="live-filter-wrapper">
+            <input type="text" id="symbolFilter" class="live-filter-input" placeholder="Filter ticker..."
+                x-model="filter">
+        </div>
+        <form action="/update_params" method="POST" style="display:flex; gap:20px; align-items:center;"
+            @submit.prevent="submitForm($el)">
+            <div class="setting-group"><label style="color:var(--accent-green)">Price Up %</label><input type="number"
+                    step="0.05" name="price_thr" value="{{ price_thr }}"></div>
+            <div class="setting-group"><label style="color:var(--accent-blue)">Vol Up %</label><input type="number"
+                    step="0.1" name="vol_burst" value="{{ vol_burst }}"></div>
+            <div class="setting-group"><label style="color:#d29922">Trades Up %</label><input type="number" step="0.1"
+                    name="trades_thr" value="{{ trades_thr }}">
+            </div>
+            <div class="param-divider"></div>
+            <div class="setting-group"><label style="color:var(--accent-blue)">Min 24h Vol</label>
+                <input type="text" name="min_vol" value="{{ min_vol }}" inputmode="numeric"
+                    x-init="$el.value = formatVal($el.value)" @input="formatInput($el)">
+            </div>
+            <div class="setting-group"><label style="color:var(--accent-blue)">Max 24h Vol</label>
+                <input type="text" name="max_vol" value="{{ max_vol }}" inputmode="numeric"
+                    x-init="$el.value = formatVal($el.value)" @input="formatInput($el)">
+            </div>
+            <div class="setting-group"><label style="color:var(--accent-green)">Min Price</label>
+                <input type="text" name="min_price" value="{{ min_price }}" inputmode="decimal"
+                    x-init="$el.value = formatVal($el.value)" @input="formatInput($el)">
+            </div>
+            <div class="setting-group"><label style="color:var(--accent-green)">Max Price</label>
+                <input type="text" name="max_price" value="{{ max_price }}" inputmode="decimal"
+                    x-init="$el.value = formatVal($el.value)" @input="formatInput($el)">
+            </div>
+            <div class="setting-group"><label style="color:var(--text-bright)">Min 24h %</label>
+                <input type="number" name="min_24h_chg" min="-99.9" max="0" step="0.1" value="{{ min_24h_chg }}">
+            </div>
+            <div class="setting-group"><label style="color:var(--text-bright)">Max 24h %</label>
+                <input type="number" name="max_24h_chg" min="0" step="0.1" value="{{ max_24h_chg }}">
+            </div>
+            <input type="submit" style="display:none">
+        </form>
+        <div class="header-actions">
+            <div style="display:flex; align-items:center; gap:10px; margin-right:10px; color:var(--text-dim); font-size:11px;">
+                <span x-text="'Seen: ' + (stats.seen_total ?? 0)"></span>
+                <span style="opacity:0.8">|</span>
+                <span x-text="'Eligible: ' + (stats.eligible_total ?? 0)"></span>
+                <span style="opacity:0.8">|</span>
+                <span x-text="'Filtered: ' + (stats.filtered_total ?? 0)"></span>
+            </div>
+            <button class="action-button" @click="clearLog()">Clear Log</button>
+            <button class="action-button theme-toggle-button" onclick="toggleTheme()" id="themeIcon">☀</button>
+        </div>
+    </div>
+
+    <!-- TABLE -->
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr>
+                    <th class="col-time">Time</th>
+                    <th class="col-toggle"></th>
+                    <th class="col-chg" @click="sort24h = (sort24h + 1) % 3" :class="{'active-sort': sort24h > 0}">
+                        24h % <span x-show="sort24h === 1" x-cloak>↓</span><span x-show="sort24h === 2" x-cloak>↑</span>
+                    </th>
+                    <th class="col-count" @click="sortCount = (sortCount + 1) % 3" :class="{'active-sort': sortCount > 0}">
+                        # <span x-show="sortCount === 1" x-cloak>↓</span><span x-show="sortCount === 2" x-cloak>↑</span>
+                    </th>
+                    <th class="col-symbol">Symbol</th>
+                    <th class="col-price">Price</th>
+                    <th class="col-vol24" @click="sortVol = (sortVol + 1) % 3" :class="{'active-sort': sortVol > 0}">
+                        Vol 24h <span x-show="sortVol === 1" x-cloak>↓</span><span x-show="sortVol === 2" x-cloak>↑</span>
+                    </th>
+                    <th class="col-type">Type</th>
+                    <th class="col-trades" @click="sortTrades = (sortTrades + 1) % 3" :class="{'active-sort': sortTrades > 0}">
+                        Trades <span x-show="sortTrades === 1" x-cloak>↓</span><span x-show="sortTrades === 2" x-cloak>↑</span>
+                    </th>
+                    <th class="col-details">Details</th>
+                </tr>
+            </thead>
+            <!-- Multiple TBODY for performance -->
+            <template x-for="group in sortedGroups" :key="group.symbol">
+                <tbody :id="'group-' + group.symbol">
+                    <!-- History inside group -->
+                    <template x-for="(signal, index) in group.history" :key="signal.time + '-' + index">
+                        <tr :class="{
+                                    'signal-row': index === 0,
+                                    'history-row': index > 0,
+                                    ['child-' + group.symbol]: index > 0,
+                                    'row-new': signal.isNew && signal.type !== 'PRICE UP',
+                                    'row-pump': signal.type === 'PRICE UP' || (index === 0 && group.isPumping)
+                                }" x-show="index === 0 || group.expanded">
+
+                            <!-- Time -->
+                            <td class="col-time" x-text="signal.time"></td>
+
+                            <!-- Toggle -->
+                            <td class="col-toggle">
+                                <template x-if="index === 0 && group.history.length > 1">
+                                    <span x-text="group.expanded ? '[-]' : '[+]'"
+                                        @click="group.expanded = !group.expanded" class="col-toggle"></span>
+                                </template>
+                            </td>
+
+                            <!-- 24h % -->
+                            <td class="col-chg">
+                                <span :class="signal['24h_chg'] >= 0 ? 'pos-chg' : 'neg-chg'"
+                                    x-text="(signal['24h_chg'] > 0 ? '+' : '') + (parseFloat(signal['24h_chg']).toFixed(1)) + '%'"></span>
+                            </td>
+
+                            <!-- Count -->
+                            <td class="col-count">
+                                <template x-if="index === 0">
+                                    <span class="count-badge">
+                                        <span class="cnt-total" x-text="group.history.length"></span>
+                                        <span class="pump-count" x-show="group.counters.pump > 0"
+                                            x-text="'(' + group.counters.pump + ')'"></span>
+                                        <span class="vol-count" x-show="group.counters.vol > 0"
+                                            x-text="'{' + group.counters.vol + '}'"></span>
+                                        <span class="trades-count" x-show="group.counters.trades > 0"
+                                            x-text="'[' + group.counters.trades + ']'"></span>
+                                    </span>
+                                </template>
+                            </td>
+
+                            <!-- Symbol -->
+                            <td class="col-symbol">
+                                <a :href="buildFuturesUrl(group.symbol)" target="_blank"
+                                    class="symbol-link" x-text="group.symbol"></a>
+                            </td>
+
+                            <!-- Price -->
+                            <td class="col-price" :class="{
+                                    'val-price-up': signal.type === 'PRICE UP',
+                                    'val-trades': signal.type === 'TRADES UP',
+                                    'val-vol': signal.type !== 'PRICE UP' && signal.type !== 'TRADES UP'
+                                }" x-text="formatVal(signal.price)"></td>
+
+                            <!-- Vol 24h -->
+                            <td class="col-vol24" x-text="formatVal(signal.vol_24h)"></td>
+
+                            <!-- Type -->
+                            <td class="col-type">
+                                <span :class="{
+                                        'type-price': signal.type === 'PRICE UP',
+                                        'type-trades': signal.type === 'TRADES UP',
+                                        'type-vol': signal.type !== 'PRICE UP' && signal.type !== 'TRADES UP'
+                                    }" x-text="signal.type"></span>
+                            </td>
+
+                            <!-- Trades -->
+                            <td class="col-trades" x-text="formatVal(signal.trades)"></td>
+
+                            <!-- Details -->
+                            <td class="col-details">
+                                <template x-if="signal.type === 'PRICE UP'">
+                                    <span><span style="color:var(--text-bright)">Change:</span> <span
+                                            style="color:var(--accent-green)" x-text="'+' + signal.change + '%'"></span>
+                                        <span style="color:var(--text-bright)">(Prev: <span
+                                                x-text="signal.prev"></span>)</span></span>
+                                </template>
+                                <template x-if="signal.type === 'TRADES UP'">
+                                    <span><span style="color:var(--text-bright)">Trades Chg:</span> <span
+                                            class="val-trades" x-text="'+' + signal.trades_change_pct + '%'"></span>
+                                        <span style="color:var(--text-bright)">(+<span
+                                                x-text="signal.trades_delta"></span>)</span></span>
+                                </template>
+                                <template x-if="signal.type !== 'PRICE UP' && signal.type !== 'TRADES UP'">
+                                    <span><span style="color:var(--text-bright)">Vol Chg:</span> <span class="val-vol"
+                                            x-text="'+' + signal.vol_change_pct + '%'"></span> <span
+                                            style="color:var(--text-bright)">($<span
+                                                x-text="formatVal(signal.vol_delta)"></span>)</span></span>
+                                </template>
+                            </td>
+                        </tr>
+                    </template>
+                </tbody>
+            </template>
+        </table>
+    </div>
+
+    <!-- Initial Data for Alpine -->
+    <div id="initial-history-data" style="display:none">{{ history | tojson }}</div>
+
+    <script>
+        document.addEventListener('alpine:init', () => {
+            Alpine.data('monitorApp', () => ({
+                signals: [], // Grouped signals: { symbol, history: [], counters: {pump, vol, trades}, expanded: false, isPumping: false, lastPumpTime: 0 }
+                filter: '',
+                refId: '11367650',
+                sortCount: 0, // 0 = off, 1 = max to min, 2 = min to max
+                sortVol: 0, // 0 = off, 1 = max to min, 2 = min to max
+                sortTrades: 0, // 0 = off, 1 = max to min, 2 = min to max
+                sort24h: 0, // 0 = off, 1 = max to min, 2 = min to max
+                stats: { seen_total: 0, eligible_total: 0, filtered_total: 0 },
+
+                init() {
+                    let initial = [];
+                    try {
+                        const dataEl = document.getElementById('initial-history-data');
+                        if (dataEl && dataEl.textContent) {
+                            initial = JSON.parse(dataEl.textContent);
+                        }
+                    } catch (e) {
+                        console.error("Failed to parse initial history:", e);
+                    }
+
+                    if (initial && initial.length > 0) {
+                        // Load history in reverse order (old to new) so addSignal works correctly
+                        initial.slice().reverse().forEach(s => this.addSignal(s, false));
+                    }
+
+                    // SocketIO setup
+                    const socket = io();
+                    socket.on('new_signal', (data) => this.addSignal(data, true));
+                    socket.on('alert', () => this.beep());
+                    socket.on('stats', (d) => {
+                        if (d && typeof d === 'object') this.stats = d;
+                    });
+
+                    socket.on('connection_status', (d) => {
+                        if (d.status === 'error') {
+                            const em = document.getElementById("error-msg");
+                            const eb = document.getElementById("error-banner");
+                            if (em && eb) {
+                                const now = new Date().toLocaleTimeString('en-GB');
+                                em.innerHTML = `<div><strong>⚠ CONNECTION ERROR</strong></div><div style="font-size: 11px; margin-top: 4px; opacity: 0.9;">${d.msg || 'Unknown error'}</div><div style="font-size: 10px; margin-top: 2px; opacity: 0.7;">Time: ${now}</div>`;
+                                eb.style.display = "flex";
+                            }
+                        }
+                    });
+
+                    socket.on('disconnect', (reason) => {
+                        const em = document.getElementById("error-msg");
+                        const eb = document.getElementById("error-banner");
+                        if (em && eb) {
+                            const now = new Date().toLocaleTimeString('en-GB');
+                            let reasonText = '';
+                            if (reason === 'io server disconnect') reasonText = 'Server closed connection';
+                            else if (reason === 'io client disconnect') reasonText = 'Client disconnected';
+                            else if (reason === 'ping timeout') reasonText = 'Connection timeout (no response from server)';
+                            else if (reason === 'transport close') reasonText = 'Network connection lost';
+                            else if (reason === 'transport error') reasonText = 'Network transport error';
+                            else reasonText = reason || 'Unknown reason';
+                            
+                            em.innerHTML = `<div><strong>⚠ SERVER DISCONNECTED</strong></div><div style="font-size: 11px; margin-top: 4px; opacity: 0.9;">Reason: ${reasonText}</div><div style="font-size: 10px; margin-top: 2px; opacity: 0.7;">Time: ${now} | Attempting to reconnect...</div>`;
+                            eb.style.display = "flex";
+                        }
+                    });
+
+                    socket.on('connect', () => {
+                        const eb = document.getElementById("error-banner");
+                        const ib = document.getElementById("info-banner");
+                        const im = document.getElementById("info-msg");
+                        const sb = document.getElementById("success-banner");
+                        const sm = document.getElementById("success-msg");
+                        const now = new Date().toLocaleTimeString('en-GB');
+                        
+                        if (eb && eb.style.display === 'flex') {
+                            // There was a disconnection - show restoration
+                            eb.style.display = "none";
+                            if (ib && im) {
+                                im.innerHTML = `<div><strong>ℹ CONNECTION RESTORED</strong></div><div style="font-size: 11px; margin-top: 4px; opacity: 0.9;">Successfully reconnected to server</div><div style="font-size: 10px; margin-top: 2px; opacity: 0.7;">Time: ${now}</div>`;
+                                ib.style.display = "flex";
+                            }
+                        } else if (sb && sm) {
+                            // First connection
+                            sm.innerHTML = `<div><strong>✔ CONNECTED TO SERVER</strong></div><div style="font-size: 11px; margin-top: 4px; opacity: 0.9;">WebSocket connection established</div><div style="font-size: 10px; margin-top: 2px; opacity: 0.7;">Time: ${now}</div>`;
+                            sb.innerHTML = sm.outerHTML + '<button class="banner-close" onclick="this.parentElement.style.display=\'none\'">✕</button>';
+                            sb.style.display = "flex";
+                        }
+                    });
+                },
+
+                get sortedGroups() {
+                    let groups = this.signals;
+
+                    if (this.filter) {
+                        const f = this.filter.toUpperCase();
+                        groups = groups.filter(s => s.symbol.includes(f));
+                    }
+
+                    if (this.sortCount === 1) {
+                        // Sort by signal count (highest to lowest)
+                        return groups.slice().sort((a, b) => {
+                            const diff = b.history.length - a.history.length;
+                            if (diff !== 0) return diff;
+                            return a.symbol.localeCompare(b.symbol);
+                        });
+                    } else if (this.sortCount === 2) {
+                        // Sort by signal count (lowest to highest)
+                        return groups.slice().sort((a, b) => {
+                            const diff = a.history.length - b.history.length;
+                            if (diff !== 0) return diff;
+                            return a.symbol.localeCompare(b.symbol);
+                        });
+                    } else if (this.sortVol === 1) {
+                        // Sort by volume (highest to lowest)
+                        return groups.slice().sort((a, b) => {
+                            const aVol = this.parseVolume(a.history[0]['vol_24h']) || 0;
+                            const bVol = this.parseVolume(b.history[0]['vol_24h']) || 0;
+                            const diff = bVol - aVol;
+                            if (diff !== 0) return diff;
+                            return a.symbol.localeCompare(b.symbol);
+                        });
+                    } else if (this.sortVol === 2) {
+                        // Sort by volume (lowest to highest)
+                        return groups.slice().sort((a, b) => {
+                            const aVol = this.parseVolume(a.history[0]['vol_24h']) || 0;
+                            const bVol = this.parseVolume(b.history[0]['vol_24h']) || 0;
+                            const diff = aVol - bVol;
+                            if (diff !== 0) return diff;
+                            return a.symbol.localeCompare(b.symbol);
+                        });
+                    } else if (this.sortTrades === 1) {
+                        // Sort by trades (highest to lowest)
+                        return groups.slice().sort((a, b) => {
+                            const aTrades = this.parseVolume(a.history[0]['trades']) || 0;
+                            const bTrades = this.parseVolume(b.history[0]['trades']) || 0;
+                            const diff = bTrades - aTrades;
+                            if (diff !== 0) return diff;
+                            return a.symbol.localeCompare(b.symbol);
+                        });
+                    } else if (this.sortTrades === 2) {
+                        // Sort by trades (lowest to highest)
+                        return groups.slice().sort((a, b) => {
+                            const aTrades = this.parseVolume(a.history[0]['trades']) || 0;
+                            const bTrades = this.parseVolume(b.history[0]['trades']) || 0;
+                            const diff = aTrades - bTrades;
+                            if (diff !== 0) return diff;
+                            return a.symbol.localeCompare(b.symbol);
+                        });
+                    } else if (this.sort24h === 1) {
+                        // Sort by 24h % (highest growth to lowest)
+                        return groups.slice().sort((a, b) => {
+                            const aChg = parseFloat(a.history[0]['24h_chg']) || 0;
+                            const bChg = parseFloat(b.history[0]['24h_chg']) || 0;
+                            const diff = bChg - aChg;
+                            if (diff !== 0) return diff;
+                            return a.symbol.localeCompare(b.symbol);
+                        });
+                    } else if (this.sort24h === 2) {
+                        // Sort by 24h % (lowest growth to highest)
+                        return groups.slice().sort((a, b) => {
+                            const aChg = parseFloat(a.history[0]['24h_chg']) || 0;
+                            const bChg = parseFloat(b.history[0]['24h_chg']) || 0;
+                            const diff = aChg - bChg;
+                            if (diff !== 0) return diff;
+                            return a.symbol.localeCompare(b.symbol);
+                        });
+                    } else {
+                        // Sort by time
+                        return groups.slice().sort((a, b) => b.lastSignalTime - a.lastSignalTime);
+                    }
+                },
+
+                parseVolume(volStr) {
+                    if (!volStr) return 0;
+                    const str = volStr.toString().trim();
+                    if (str.endsWith('M')) {
+                        return parseFloat(str) * 1_000_000;
+                    } else if (str.endsWith('K')) {
+                        return parseFloat(str) * 1_000;
+                    }
+                    return parseFloat(str) || 0;
+                },
+
+                toggleCountSort() {
+                    this.sortCount = (this.sortCount + 1) % 3;
+                },
+
+                addSignal(data, isNew = true) {
+                    let group = this.signals.find(s => s.symbol === data.symbol);
+
+                    if (!group) {
+                        group = {
+                            symbol: data.symbol,
+                            history: [],
+                            counters: { pump: 0, vol: 0, trades: 0 },
+                            expanded: false,
+                            isPumping: false,
+                            lastPumpTime: 0,
+                            lastSignalTime: Date.now()
+                        };
+                        this.signals.unshift(group);
+                    } else {
+                        // Update last signal timestamp
+                        group.lastSignalTime = Date.now();
+                    }
+
+                    // Create data copy for history (isNew for animation)
+                    const signal = { ...data, isNew: isNew };
+                    group.history.unshift(signal);
+
+                    // Update counters
+                    if (data.type === 'PRICE UP') {
+                        group.counters.pump++;
+                        group.isPumping = true;
+                        group.lastPumpTime = Date.now();
+                        // Timer to turn off "green" after 20s
+                        setTimeout(() => {
+                            if (Date.now() - group.lastPumpTime >= 20000) {
+                                group.isPumping = false;
+                            }
+                        }, 20000);
+                    } else if (data.type === 'TRADES UP') {
+                        group.counters.trades++;
+                    } else {
+                        group.counters.vol++;
+                    }
+
+                    // FORCE REACTIVITY (so sorting works when counters update)
+                    this.signals = [...this.signals];
+                },
+
+                buildFuturesUrl(symbol) {
+                    return 'https://www.binance.com/en/futures/' + symbol + '?ref=' + this.refId;
+                },
+
+                clearLog() {
+                    this.signals = [];
+                    fetch('/clear_session', {
+                        method: 'POST',
+                        headers: { 'Accept': 'application/json' }
+                    }).catch(e => console.error('Clear session error:', e));
+                },
+
+                beep() {
+                    try {
+                        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                        if (audioCtx.state === 'suspended') audioCtx.resume();
+                        const o = audioCtx.createOscillator();
+                        const g = audioCtx.createGain();
+                        o.connect(g);
+                        g.connect(audioCtx.destination);
+                        o.type = 'square';
+                        o.frequency.value = 440;
+                        g.gain.value = 0.05;
+                        o.start();
+                        setTimeout(() => o.stop(), 100);
+                    } catch (e) { console.error("Audio error", e); }
+                },
+
+                formatVal(val) {
+                    if (val === null || val === undefined || val === '') return '';
+                    let s = String(val).replace(/\s/g, '');
+                    let parts = s.split('.');
+                    parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+                    return parts.join('.');
+                },
+
+                formatInput(el) {
+                    let cursor = el.selectionStart;
+                    let oldLen = el.value.length;
+                    let formatted = this.formatVal(el.value);
+                    el.value = formatted;
+                    let newLen = formatted.length;
+                    // Correct cursor (when adding/removing spaces)
+                    cursor = cursor + (newLen - oldLen);
+                    el.setSelectionRange(cursor, cursor);
+                },
+
+                submitForm(form) {
+                    const formData = new FormData(form);
+                    const params = new URLSearchParams();
+
+                    for (let [key, value] of formData.entries()) {
+                        const isNumericField = ['min_vol', 'max_vol', 'min_price', 'max_price', 'min_24h_chg', 'max_24h_chg', 'price_thr', 'vol_burst', 'trades_thr'].includes(key);
+                        // Clean spaces and fix commas for numbers
+                        const cleanedValue = isNumericField ? String(value).replace(/\s/g, '').replace(/,/g, '.') : value;
+                        params.append(key, cleanedValue);
+                    }
+
+                    fetch('/update_params', {
+                        method: 'POST',
+                        body: params,
+                        headers: { 'Accept': 'application/json' }
+                    })
+                        .then(async response => {
+                            const text = await response.text();
+                            let data;
+                            try {
+                                data = JSON.parse(text);
+                            } catch (e) {
+                                throw new Error("Server returned invalid response.");
+                            }
+                            if (!response.ok) throw new Error(data.message || 'Server error ' + response.status);
+                            return data;
+                        })
+                        .then(data => {
+                            if (data.status === 'success') {
+                                const header = document.querySelector('.header-bar');
+                                if (header) {
+                                    header.classList.add('saved');
+                                    setTimeout(() => header.classList.remove('saved'), 3000);
+                                }
+                            }
+                        })
+                        .catch(e => {
+                            console.error("Update error:", e);
+                            alert("Update error: " + e.message);
+                        });
+                }
+            }));
+        });
+
+        // Helper functions
+        function toggleTheme() {
+            const b = document.body;
+            b.classList.toggle("light-theme");
+            const t = b.classList.contains("light-theme") ? "light" : "dark";
+            localStorage.setItem("theme", t);
+            const icon = document.getElementById("themeIcon");
+            if (icon) icon.innerText = t === "light" ? "☾" : "☀";
+        }
+
+        if (localStorage.getItem("theme") === "light") {
+            document.body.classList.add("light-theme");
+            window.addEventListener('load', () => {
+                const icon = document.getElementById("themeIcon");
+                if (icon) icon.innerText = "☾";
+            });
+        }
+
+        function toggleMenu() {
+            const m = document.getElementById('management-overlay');
+            if (m) m.style.display = (m.style.display === 'flex') ? 'none' : 'flex';
+        }
+
+        function clearLog() {
+            const el = document.querySelector('[x-data]');
+            if (el && window.Alpine) {
+                const data = Alpine.$data(el);
+                if (data) data.clearLog();
+            }
+        }
+    </script>
+</body>
+
+</html>
