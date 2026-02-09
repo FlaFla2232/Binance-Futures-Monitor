@@ -1,6 +1,6 @@
 ![App screenshot](./github.png)
 
-# Binance Futures WebSocket Monitor
+# Binance Futures Monitor
 
 A lightweight real-time monitor for Binance **USDT-M Futures** that consumes the `!ticker@arr` stream via WebSocket, applies configurable filters, and generates trading signals (events) in the browser UI.
 
